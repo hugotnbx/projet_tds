@@ -1,0 +1,12 @@
+def rec_sound(duree):
+    fe = 44100
+    son_enregistre = sd.rec(int(duree * fe), samplerate=fe, channels=1,dtype='float64')
+    #pwd=os.getcwd()
+    print("Recording Audio")
+    sd.wait()
+    print("Audio recording complete , Play Audio")
+    sd.play(son_enregistre, fe)
+    sd.wait()
+    print("Play Audio Complete")
+    write("son_enregistre.wav",fe,son_enregistre)
+    return np.squeeze(son_enregistre)
