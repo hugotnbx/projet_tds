@@ -3,8 +3,8 @@ import sounddevice as sd
 from scipy.io.wavfile import read, write
 import os
 
-path = "C:/Users/0ropo/Documents/Cours/bac3/traitements de signaux/projetTDS/sons/recorded_sound.wav"
-# path = "C:/Users/Hugo Troonbeeckx/OneDrive - EPHEC asbl/Documents/BAC3/Q1/Traitement des signaux et données/Projet/projet_tds/alarms/recorded_sound.wav"
+# path = "C:/Users/0ropo/Documents/Cours/bac3/traitements de signaux/projetTDS/sons/recorded_sound.wav"
+path = "C:/Users/Hugo Troonbeeckx/OneDrive - EPHEC asbl/Documents/BAC3/Q1/Traitement des signaux et données/Projet/projet_tds/alarms/recorded_sound.wav"
 
 def sound_recording(duration):
     fe = 44100
@@ -18,3 +18,5 @@ def sound_recording(duration):
     print("Play Audio Complete")
     write(path, fe, recorded_sound)
     return np.squeeze(recorded_sound)
+
+sound_recording(5)

@@ -3,8 +3,8 @@ from scipy import signal
 from scipy.io import wavfile
 
 # Liste des signaux à classifier
-#files_to_classify = ['alarms/hyper.wav', 'alarms/hypo.wav', 'alarms/vache_hyper.wav', 'alarms/moustique_hyper.wav', 'alarms/hyper_fanfare.wav', 'alarms/hypo_fanfare.wav'] 
-files_to_classify = ['alarms/hyper.wav', 'alarms/hypo.wav', 'alarms/vache_hyper.wav'] 
+files_to_classify = ['alarms/hyper.wav', 'alarms/hypo.wav', 'alarms/vache_hyper.wav', 'alarms/moustique_hyper.wav', 'alarms/hyper_fanfare.wav', 'alarms/hypo_fanfare.wav'] 
+#files_to_classify = ['alarms/hyper.wav', 'alarms/hypo.wav', 'alarms/vache_hyper.wav'] 
 
 # Listes de classification des signaux
 hyper_signals = []

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classification des signaux</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .array {
+            padding: 10px;
+            background: #f4f4f4;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Classification des signaux</h1>
+    <button id="classifyButton">Lancer la classification</button>
+    <div id="results" class="result"></div>
+
+    <script>
+        document.getElementById('classifyButton').addEventListener('click', async () => {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = "Classification en cours...";
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5000/classify');
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <h2>Résultats :</h2>
+                    <div class="array"><strong>Signaux hyper :</strong> ${data.hyper_signals.join(', ') || 'Aucun'}</div>
+                    <div class="array"><strong>Signaux hypo :</strong> ${data.hypo_signals.join(', ') || 'Aucun'}</div>
+                    <div class="array"><strong>Autres signaux :</strong> ${data.other_signals.join(', ') || 'Aucun'}</div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Erreur : ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
