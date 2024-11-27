@@ -17,6 +17,9 @@
             background: #f4f4f4;
             margin-bottom: 10px;
         }
+        .error {
+            color: red;
+        }
     </style>
 </head>
 <body>
@@ -31,6 +34,7 @@
             
             try {
                 const response = await fetch('http://127.0.0.1:5000/classify');
+                if (!response.ok) throw new Error("Erreur dans la réponse du serveur");
                 const data = await response.json();
                 
                 resultsDiv.innerHTML = `
@@ -40,7 +44,7 @@
                     <div class="array"><strong>Autres signaux :</strong> ${data.other_signals.join(', ') || 'Aucun'}</div>
                 `;
             } catch (error) {
-                resultsDiv.innerHTML = `<p style="color: red;">Erreur : ${error.message}</p>`;
+                resultsDiv.innerHTML = `<p class="error">Erreur : ${error.message}</p>`;
             }
         });
     </script>
