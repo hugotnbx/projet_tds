@@ -1,48 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classification des signaux</title>
+    <title>Classification de signaux de glycémie</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+            font-family: 'Arial', sans-serif;
+            background-color: #fffae5;
+            color: black;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .result {
-            margin-top: 20px;
+
+        h1 {
+            color: #7f5b9d;
+            font-size: 2rem;
+            margin: 30px;
+            text-align: center;
         }
-        .array {
+
+        form {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        input {
             padding: 10px;
-            background: #f4f4f4;
-            margin-bottom: 10px;
+            font-size: 1rem;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            outline: none;
+            margin-right: 10px;
         }
-        .error {
-            color: red;
+
+        input:focus {
+            border: 1px solid #7f5b9d;
+            box-shadow: 0 0 5px #7f5b9d;
+        }
+
+        button {
+            background-color: #7f5b9d;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 15px;
+            border-radius: 5px;
+        }
+
+        .result, #spectrogram {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .result p {
+            font-size: 20px;
+            padding: 15px;
+            background-color: #b08ab8;
+            border: 1px solid #7f5b9d;
+            border-radius: 5px;
+            color: #3f3568;
+        }
+
+        .result p.error {
+            background-color: #fdecea;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        img {
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-    <h1>Classification des signaux</h1>
-    <button id="classifyButton">Lancer la classification</button>
+    <h1>Classification de signaux de glycémie</h1>
+    <header>
+        <label for="filePath">Chemin du fichier :</label>
+        <input type="text" id="filePath" placeholder="Exemple : signals/hyper.wav">
+        <button id="analyzeButton">Classifier</button>
+    </header>
     <div id="results" class="result"></div>
+    <div id="spectrogram"></div>
 
     <script>
-        document.getElementById('classifyButton').addEventListener('click', async () => {
+        document.getElementById('analyzeButton').addEventListener('click', async () => {
+            const filePath = document.getElementById('filePath').value;
             const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = "Classification en cours...";
-            
+            const spectrogramDiv = document.getElementById('spectrogram');
+
+            resultsDiv.innerHTML = "Classification du signal en cours...";
+            spectrogramDiv.innerHTML = "";
+
             try {
-                const response = await fetch('http://127.0.0.1:5000/classify');
+                const response = await fetch('http://127.0.0.1:5000/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+
+                if (filePath == "") throw new Error("Vous devez spécifier un chemin de fichier");
+
                 if (!response.ok) throw new Error("Erreur dans la réponse du serveur");
+
                 const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                if (data.classification == "indéterminé") {
+                    resultsDiv.innerHTML = `<p>Le signal est trop bruité pour pouvoir être correctement classifié</p>`;
+                } 
+                else {
+                    resultsDiv.innerHTML = `<p>Le signal analysé est un signal <strong>${data.classification}</strong></p>`;
+                }
                 
-                resultsDiv.innerHTML = `
-                    <h2>Résultats :</h2>
-                    <div class="array"><strong>Signaux hyper :</strong> ${data.hyper_signals.join(', ') || 'Aucun'}</div>
-                    <div class="array"><strong>Signaux hypo :</strong> ${data.hypo_signals.join(', ') || 'Aucun'}</div>
-                    <div class="array"><strong>Autres signaux :</strong> ${data.other_signals.join(', ') || 'Aucun'}</div>
-                `;
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${btoa(data.spectrogram)}`;
+                spectrogramDiv.appendChild(img);
+
             } catch (error) {
                 resultsDiv.innerHTML = `<p class="error">Erreur : ${error.message}</p>`;
             }

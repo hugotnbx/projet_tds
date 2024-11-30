@@ -2,6 +2,9 @@ from flask import Flask, jsonify, request
 from scipy.signal import spectrogram, butter, filtfilt
 from scipy.io import wavfile
 import numpy as np
+import io
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import matplotlib.pyplot as plt
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -49,6 +52,11 @@ def find_max_amplitude(f, t, Sxx, target_frequencies):
 
 def classify_signal(max_amplitudes):
     times = [t_max for _, t_max, _ in max_amplitudes]
+
+    for i in range(len(times) - 1):
+        if abs(times[i + 1] - times[i]) > 0.35:
+            return "indéterminé"
+    
     if times == sorted(times):
         return "hyper"
     elif times == sorted(times, reverse=True):
@@ -56,38 +64,41 @@ def classify_signal(max_amplitudes):
     else:
         return "indéterminé"
 
-@app.route('/classify', methods=['GET'])
-def classify():
-    files = [
-            'alarms/hyper.wav', 'alarms/hypo.wav', 
-            'alarms/new/hyper_vache_0DB.wav', 'alarms/new/hyper_vache_10DB.wav', 'alarms/new/hyper_vache_20DB.wav', 'alarms/new/hyper_vache_30DB.wav',
-            'alarms/new/hypo_vache_0DB.wav', 'alarms/new/hypo_vache_10DB.wav', 'alarms/new/hypo_vache_20DB.wav', 'alarms/new/hypo_vache_30DB.wav',
-            'alarms/new/hyper_bébé_0DB.wav', 'alarms/new/hyper_bébé_10DB.wav', 'alarms/new/hyper_bébé_20DB.wav', 'alarms/new/hyper_bébé_30DB.wav',
-            'alarms/new/hypo_bébé_0DB.wav', 'alarms/new/hypo_bébé_10DB.wav', 'alarms/new/hypo_bébé_20DB.wav', 'alarms/new/hypo_bébé_30DB.wav',
-            'alarms/new/hyper_chien_0DB.wav', 'alarms/new/hyper_chien_10DB.wav', 'alarms/new/hyper_chien_20DB.wav', 'alarms/new/hyper_chien_30DB.wav',
-            'alarms/new/hypo_chien_0DB.wav', 'alarms/new/hypo_chien_10DB.wav', 'alarms/new/hypo_chien_20DB.wav', 'alarms/new/hypo_chien_30DB.wav',
-            'alarms/new/hyper_discussion_0DB.wav', 'alarms/new/hyper_discussion_10DB.wav', 'alarms/new/hyper_discussion_20DB.wav', 'alarms/new/hyper_discussion_30DB.wav',
-            'alarms/new/hypo_discussion_0DB.wav', 'alarms/new/hypo_discussion_10DB.wav', 'alarms/new/hypo_discussion_20DB.wav', 'alarms/new/hypo_discussion_30DB.wav',
-            'alarms/new/hyper_moustique_0DB.wav', 'alarms/new/hyper_moustique_10DB.wav', 'alarms/new/hyper_moustique_20DB.wav', 'alarms/new/hyper_moustique_30DB.wav',
-            'alarms/new/hypo_moustique_0DB.wav', 'alarms/new/hypo_moustique_10DB.wav', 'alarms/new/hypo_moustique_20DB.wav', 'alarms/new/hypo_moustique_30DB.wav',
-            ]
-    results = {"hyper_signals": [], "hypo_signals": [], "other_signals": []}
-    
-    for file_path in files:
+@app.route('/analyze', methods=['POST'])
+def analyze_signal():
+    data = request.get_json()
+    file_path = data.get('file_path')
+
+    if not file_path:
+        return jsonify({"error": "Chemin du fichier manquant"}), 400
+
+    try:
         Fs, s = read_file(file_path)
         f, t, Sxx = spectrogram(s, Fs, window='hamming', nperseg=1024, noverlap=512)
         f_filtered, Sxx_filtered = filter_spectrogram(f, Sxx, 1000, 2000)
         max_amplitudes = find_max_amplitude(f_filtered, t, Sxx_filtered, target_frequencies)
-        classification = classify_signal(max_amplitudes)
-        
-        if classification == "hyper":
-            results["hyper_signals"].append(file_path)
-        elif classification == "hypo":
-            results["hypo_signals"].append(file_path)
-        else:
-            results["other_signals"].append(file_path)
-    
-    return jsonify(results)
+        signal_class = classify_signal(max_amplitudes)
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.pcolormesh(t, f_filtered, np.log10(Sxx_filtered + 1e-10), shading='gouraud')
+        for target_frequency, t_max, _ in max_amplitudes:
+            ax.axvline(x=t_max, color='red', linestyle='--', label=f'{target_frequency} Hz - {t_max:.2f}s')
+        ax.set_ylabel('Fréquences (Hz)')
+        ax.set_xlabel('Temps (s)')
+        ax.set_title(f"Spectrogramme du signal filtré (1000-2000 Hz)")
+        ax.legend()
+
+        output = io.BytesIO()
+        FigureCanvas(fig).print_png(output)
+        plt.close(fig)
+
+        return jsonify({
+            "classification": signal_class,
+            "spectrogram": output.getvalue().decode('latin1')
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
