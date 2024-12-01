@@ -12,17 +12,20 @@ CORS(app)
 
 target_frequencies = [1312, 1410, 1500, 1619, 1722]
 
+# Fonction pour convertir un signal stéréo en mono
 def convert_to_mono(s):
     if len(s.shape) == 2:
         s = s.mean(axis=1)
     return s
 
+# Fonction pour filtrer un signal
 def filter_signal(s, Wn1, Wn2, type, Fs):
     Wn = [Wn1 / (Fs / 2), Wn2 / (Fs / 2)]
     b, a = butter(1, Wn, type)
     s = filtfilt(b, a, s)
     return s
 
+# Fonction pour appliquer les filtres
 def apply_filter(Fs, s):
     s = filter_signal(s, 1311, 1723, 'band', Fs) 
     s = filter_signal(s, 1313, 1409, 'stop', Fs)
@@ -31,16 +34,19 @@ def apply_filter(Fs, s):
     s = filter_signal(s, 1620, 1721, 'stop', Fs) 
     return s
 
+# Fonction pour lire un signal
 def read_file(file_path):
     Fs, s = wavfile.read(file_path)
     s = convert_to_mono(s)
     s = apply_filter(Fs, s)
     return Fs, s
 
+# Fonction pour filtrer un spectrogramme dans une plage de fréquences donnée
 def filter_spectrogram(frequencies, spectrogram, freq_min, freq_max):
     indices = (frequencies >= freq_min) & (frequencies <= freq_max)
     return frequencies[indices], spectrogram[indices, :]
 
+# Fonction pour trouver l'amplitude maximale à une fréquence donnée
 def find_max_amplitude(f, t, Sxx, target_frequencies):
     results = []
     for target_frequency in target_frequencies:
@@ -50,6 +56,7 @@ def find_max_amplitude(f, t, Sxx, target_frequencies):
         results.append((target_frequency, t[max_index], amplitude_at_freq[max_index]))
     return results
 
+# Fonction pour classifier un signal
 def classify_signal(max_amplitudes):
     times = [t_max for _, t_max, _ in max_amplitudes]
 
@@ -64,6 +71,7 @@ def classify_signal(max_amplitudes):
     else:
         return "indéterminé"
 
+# Route pour analyser et réaliser la classification d'un signal
 @app.route('/analyze', methods=['POST'])
 def analyze_signal():
     data = request.get_json()
@@ -77,7 +85,7 @@ def analyze_signal():
         f, t, Sxx = spectrogram(s, Fs, window='hamming', nperseg=1024, noverlap=512)
         f_filtered, Sxx_filtered = filter_spectrogram(f, Sxx, 1000, 2000)
         max_amplitudes = find_max_amplitude(f_filtered, t, Sxx_filtered, target_frequencies)
-        signal_class = classify_signal(max_amplitudes)
+        signal_type = classify_signal(max_amplitudes)
 
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.pcolormesh(t, f_filtered, np.log10(Sxx_filtered + 1e-10), shading='gouraud')
@@ -93,7 +101,7 @@ def analyze_signal():
         plt.close(fig)
 
         return jsonify({
-            "classification": signal_class,
+            "classification": signal_type,
             "spectrogram": output.getvalue().decode('latin1')
         })
 
