@@ -21,7 +21,7 @@ def convert_to_mono(s):
 # Fonction pour filtrer un signal
 def filter_signal(s, Wn1, Wn2, type, Fs):
     Wn = [Wn1 / (Fs / 2), Wn2 / (Fs / 2)]
-    b, a = butter(1, Wn, type)
+    b, a = butter(4, Wn, type)
     s = filtfilt(b, a, s)
     return s
 
